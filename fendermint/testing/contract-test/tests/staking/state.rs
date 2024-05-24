@@ -4,6 +4,7 @@
 use std::collections::{BTreeMap, VecDeque};
 
 use arbitrary::Unstructured;
+use bls_signatures::Serialize as _;
 use fendermint_crypto::{PublicKey, SecretKey};
 use fendermint_testing::arb::{ArbSubnetAddress, ArbSubnetID, ArbTokenAmount};
 use fendermint_vm_actor_interface::eam::EthAddress;
@@ -41,6 +42,8 @@ pub struct StakingUpdate {
 pub struct StakingAccount {
     pub public_key: PublicKey,
     pub secret_key: SecretKey,
+    pub bls_public_key: bls_signatures::PublicKey,
+    pub bls_secret_key: bls_signatures::PrivateKey,
     pub addr: EthAddress,
     /// In this test the accounts should never gain more than their initial balance.
     pub initial_balance: TokenAmount,
@@ -179,8 +182,8 @@ impl StakingState {
             .validators
             .iter()
             .map(|v| {
-                let addr = EthAddress::new_secp256k1(&v.public_key.0.serialize()).unwrap();
-                (addr, v.power.clone())
+                let addr = EthAddress::new_secp256k1(&v.0.public_key.0.serialize()).unwrap();
+                (addr, v.0.power.clone())
             })
             .collect::<Vec<_>>();
 
@@ -331,7 +334,7 @@ impl StakingState {
         self.child_genesis
             .validators
             .iter()
-            .map(|v| v.power.0.clone())
+            .map(|v| v.0.power.0.clone())
             .sum()
     }
 
@@ -492,6 +495,9 @@ impl arbitrary::Arbitrary<'_> for StakingState {
         for _ in 0..num_accounts {
             let sk = SecretKey::random(&mut rng);
             let pk = sk.public_key();
+            let bls_sk = bls_signatures::PrivateKey::generate(&mut rng);
+            let bls_pk = bls_sk.public_key();
+
             // All of them need to be ethereum accounts to interact with IPC.
             let addr = EthAddress::new_secp256k1(&pk.serialize()).unwrap();
 
@@ -510,6 +516,8 @@ impl arbitrary::Arbitrary<'_> for StakingState {
             accounts.push(StakingAccount {
                 public_key: pk,
                 secret_key: sk,
+                bls_public_key: bls_pk,
+                bls_secret_key: bls_sk,
                 addr,
                 initial_balance,
                 current_balance,
@@ -529,12 +537,15 @@ impl arbitrary::Arbitrary<'_> for StakingState {
             .collect();
 
         // Select one validator to be the parent validator, it doesn't matter who.
-        let parent_validators = vec![Validator {
-            public_key: ValidatorKey(accounts[0].public_key),
-            // All the power in the parent subnet belongs to this single validator.
-            // We are only interested in the staking of the *child subnet*.
-            power: Collateral(TokenAmount::from_atto(1)),
-        }];
+        let parent_validators = vec![(
+            Validator {
+                public_key: ValidatorKey(accounts[0].public_key),
+                // All the power in the parent subnet belongs to this single validator.
+                // We are only interested in the staking of the *child subnet*.
+                power: Collateral(TokenAmount::from_atto(1)),
+            },
+            accounts[0].bls_public_key.as_bytes(),
+        )];
 
         // Select some of the accounts to be the initial *child subnet* validators.
         let current_configuration = accounts
@@ -546,10 +557,13 @@ impl arbitrary::Arbitrary<'_> for StakingState {
                 // Make sure it's not zero.
                 let initial_stake = initial_stake.max(TokenAmount::from_atto(1));
 
-                Ok(Validator {
-                    public_key: ValidatorKey(a.public_key),
-                    power: Collateral(initial_stake),
-                })
+                Ok((
+                    Validator {
+                        public_key: ValidatorKey(a.public_key),
+                        power: Collateral(initial_stake),
+                    },
+                    a.bls_public_key.as_bytes(),
+                ))
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -575,7 +589,6 @@ impl arbitrary::Arbitrary<'_> for StakingState {
             &parent_ipc.gateway.subnet_id,
             ArbSubnetAddress::arbitrary(u)?.0,
         );
-
         let parent_genesis = Genesis {
             chain_name: String::arbitrary(u)?,
             timestamp: Timestamp(u64::arbitrary(u)?),

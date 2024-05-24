@@ -160,6 +160,14 @@ fn b64_to_public(b64: &str) -> anyhow::Result<PublicKey> {
     Ok(pk)
 }
 
+fn b64_to_bls_public(b64: &str) -> anyhow::Result<bls_signatures::PublicKey> {
+    let json = serde_json::json!(b64);
+    // TODO: Lol is this correct? Problem is PublicKey doesn implement serde
+    let pk: Vec<u8> = serde_json::from_value(json)?;
+    let pk = bls_signatures::PublicKey::from_bytes(&pk)?;
+    Ok(pk)
+}
+
 fn b64_to_secret(b64: &str) -> anyhow::Result<SecretKey> {
     let bz = from_b64(b64)?;
     let sk = SecretKey::try_from(bz)?;
@@ -175,6 +183,12 @@ fn b64_to_bls_secret(b64: &str) -> anyhow::Result<bls_signatures::PrivateKey> {
 pub fn read_public_key(public_key: &Path) -> anyhow::Result<PublicKey> {
     let b64 = std::fs::read_to_string(public_key).context("failed to read public key")?;
     let pk = b64_to_public(&b64).context("failed to parse public key")?;
+    Ok(pk)
+}
+
+pub fn read_bls_public_key(public_key: &Path) -> anyhow::Result<bls_signatures::PublicKey> {
+    let b64 = std::fs::read_to_string(public_key).context("failed to read public key")?;
+    let pk = b64_to_bls_public(&b64).context("failed to parse public key")?;
     Ok(pk)
 }
 

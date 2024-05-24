@@ -126,6 +126,9 @@ pub struct GenesisAddValidatorArgs {
     /// Path to the Secp256k1 public key exported in base64 format.
     #[arg(long, short)]
     pub public_key: PathBuf,
+    /// Path to the BLS public key exported in base64 format.
+    #[arg(long, short)]
+    pub bls_public_key: PathBuf,
     /// The collateral staked by the validator, lending it its voting power.
     #[arg(long, short = 'v', value_parser = parse_full_fil)]
     pub power: TokenAmount,

@@ -2960,6 +2960,7 @@ dependencies = [
  "arbitrary",
  "arbtest",
  "async-trait",
+ "bls-signatures",
  "byteorder",
  "bytes",
  "cid",

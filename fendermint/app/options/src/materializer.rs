@@ -83,6 +83,10 @@ pub struct MaterializerImportKeyArgs {
     #[arg(long, short)]
     pub secret_key: PathBuf,
 
+    /// Path to the BLS private key exported in base64 or hexadecimal format.
+    #[arg(long, short)]
+    pub bls_secret_key: PathBuf,
+
     /// Run validation before attempting to set up the testnet.
     #[arg(long, short)]
     pub account_id: AccountId,

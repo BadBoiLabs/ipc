@@ -17,7 +17,7 @@ use fendermint_materializer::{
 
 use crate::cmd;
 
-use super::key::{read_secret_key, read_secret_key_hex};
+use super::key::{read_bls_secret_key, read_secret_key, read_secret_key_hex};
 
 cmd! {
   MaterializerArgs(self) {
@@ -53,7 +53,7 @@ cmd! {
 
 cmd! {
   MaterializerImportKeyArgs(self, data_dir: PathBuf) {
-    import_key(&data_dir, &self.secret_key, &self.manifest_file, &self.account_id)
+    import_key(&data_dir, &self.secret_key, &self.bls_secret_key, &self.manifest_file, &self.account_id)
   }
 }
 
@@ -104,6 +104,7 @@ fn read_manifest(manifest_file: &Path) -> anyhow::Result<(TestnetName, Manifest)
 fn import_key(
     data_dir: &Path,
     secret_key: &Path,
+    bls_secret_key: &Path,
     manifest_file: &Path,
     account_id: &AccountId,
 ) -> anyhow::Result<()> {
@@ -117,8 +118,8 @@ fn import_key(
     }
 
     let sk = read_secret_key(secret_key).or_else(|_| read_secret_key_hex(secret_key))?;
-
-    let _acc = DefaultAccount::create(data_dir, &testnet_name.account(account_id), sk)?;
+    let bls_sk = read_bls_secret_key(bls_secret_key)?;
+    let _acc = DefaultAccount::create(data_dir, &testnet_name.account(account_id), sk, bls_sk)?;
 
     Ok(())
 }

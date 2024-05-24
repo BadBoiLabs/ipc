@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0, MIT
 
 use anyhow::{anyhow, Context};
+use bls_signatures::Serialize;
 use fendermint_crypto::PublicKey;
 use fvm_shared::address::Address;
 use ipc_provider::config::subnet::{EVMSubnet, SubnetConfig};
@@ -18,7 +19,7 @@ use fendermint_vm_genesis::{
 use crate::cmd;
 use crate::options::genesis::*;
 
-use super::key::read_public_key;
+use super::key::{read_bls_public_key, read_public_key};
 
 cmd! {
   GenesisArgs(self) {
@@ -164,13 +165,17 @@ fn add_validator(genesis_file: &PathBuf, args: &GenesisAddValidatorArgs) -> anyh
     update_genesis(genesis_file, |mut genesis| {
         let pk = read_public_key(&args.public_key)?;
         let vk = ValidatorKey(pk);
-        if genesis.validators.iter().any(|v| v.public_key == vk) {
+        if genesis.validators.iter().any(|v| v.0.public_key == vk) {
             return Err(anyhow!("account already exists in the genesis file"));
         }
-        let validator = Validator {
-            public_key: vk,
-            power: Collateral(args.power.clone()),
-        };
+        let bls_pk = read_bls_public_key(&args.bls_public_key)?;
+        let validator = (
+            Validator {
+                public_key: vk,
+                power: Collateral(args.power.clone()),
+            },
+            bls_pk.as_bytes(),
+        );
         genesis.validators.push(validator);
         Ok(genesis)
     })

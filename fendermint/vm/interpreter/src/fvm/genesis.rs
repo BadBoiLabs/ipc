@@ -93,7 +93,7 @@ where
             .validators
             .iter()
             .cloned()
-            .map(|vc| vc.map_power(|c| c.into_power(genesis.power_scale)))
+            .map(|vc| vc.0.map_power(|c| c.into_power(genesis.power_scale)))
             .collect();
 
         // Currently we just pass them back as they are, but later we should
@@ -246,6 +246,7 @@ where
                 None,
             )
             .context("failed to create chainmetadata actor")?;
+        // TODO: Add a map from Validators to their bls key.
         state
             .create_custom_actor(
                 fendermint_actor_cetf::CETF_ACTOR_NAME,
@@ -317,8 +318,8 @@ where
             // IPC Gateway actor.
             let gateway_addr = {
                 use ipc::gateway::ConstructorParameters;
-
-                let params = ConstructorParameters::new(ipc_params.gateway, genesis.validators)
+                let v = genesis.validators.iter().map(|v| v.0.clone()).collect();
+                let params = ConstructorParameters::new(ipc_params.gateway, v)
                     .context("failed to create gateway constructor")?;
 
                 let facets = deployer
