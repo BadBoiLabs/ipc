@@ -9,6 +9,7 @@ use fvm::state_tree::StateTree;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::CborStore;
 
+// TODO: I think we actually want to do this in ExtendVoteInterpreter::extend_vote.
 /// Reads the CETF system actor state to retrieve the tag
 pub fn get_tag_at_height<DB: Blockstore + Clone + 'static>(
     db: DB,

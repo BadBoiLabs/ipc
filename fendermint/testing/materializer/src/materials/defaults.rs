@@ -7,7 +7,8 @@ use std::{
 };
 
 use anyhow::Context;
-use ethers::core::rand::Rng;
+use bls_signatures::Serialize as _;
+use ethers::core::rand::{CryptoRng, Rng};
 use fendermint_crypto::{to_b64, PublicKey, SecretKey};
 use fendermint_vm_actor_interface::{eam::EthAddress, init::builtin_actor_eth_addr, ipc};
 use fendermint_vm_genesis::Genesis;
@@ -71,6 +72,8 @@ pub struct DefaultAccount {
     name: AccountName,
     secret_key: SecretKey,
     public_key: PublicKey,
+    pub bls_secret_key: bls_signatures::PrivateKey,
+    pub bls_public_key: bls_signatures::PublicKey,
     /// Path to the directory where the keys are exported.
     path: PathBuf,
 }
@@ -116,13 +119,14 @@ impl DefaultAccount {
         self.eth_addr().into()
     }
 
-    pub fn get_or_create<R: Rng>(
+    pub fn get_or_create<R: Rng + CryptoRng>(
         rng: &mut R,
         root: impl AsRef<Path>,
         name: &AccountName,
     ) -> anyhow::Result<Self> {
         let dir = root.as_ref().join(name.path());
         let sk = dir.join("secret.hex");
+        let bls_sk = dir.join("secret.bls.hex");
 
         let (sk, is_new) = if sk.exists() {
             let sk = std::fs::read_to_string(sk).context("failed to read private key")?;
@@ -134,15 +138,29 @@ impl DefaultAccount {
             (sk, true)
         };
 
+        let (bls_secret_key, is_new_bls) = if bls_sk.exists() {
+            let sk = std::fs::read_to_string(bls_sk).context("failed to read private key")?;
+            let sk = hex::decode(sk).context("cannot decode hex private key")?;
+            let sk = bls_signatures::PrivateKey::from_bytes(&sk)
+                .context("failed to parse bls secret key")?;
+            (sk, false)
+        } else {
+            let sk = bls_signatures::PrivateKey::generate(rng);
+            (sk, true)
+        };
+
         let pk = sk.public_key();
+        let bls_public_key = bls_secret_key.public_key();
         let acc = Self {
             name: name.clone(),
             secret_key: sk,
             public_key: pk,
+            bls_secret_key,
+            bls_public_key,
             path: dir,
         };
 
-        if is_new {
+        if is_new || is_new_bls {
             acc.export()?;
         }
 
@@ -154,13 +172,17 @@ impl DefaultAccount {
         root: impl AsRef<Path>,
         name: &AccountName,
         sk: SecretKey,
+        bls_sk: bls_signatures::PrivateKey,
     ) -> anyhow::Result<Self> {
         let pk = sk.public_key();
+        let bls_public_key = bls_sk.public_key();
         let dir = root.as_ref().join(name.path());
         let acc = Self {
             name: name.clone(),
             secret_key: sk,
             public_key: pk,
+            bls_secret_key: bls_sk,
+            bls_public_key,
             path: dir,
         };
         acc.export()?;
@@ -171,6 +193,13 @@ impl DefaultAccount {
     fn export(&self) -> anyhow::Result<()> {
         let sk = self.secret_key.serialize();
         let pk = self.public_key.serialize();
+
+        let bls_sk = self.bls_secret_key.as_bytes();
+        let bls_pk = self.bls_public_key.as_bytes();
+        export(&self.path, "secret", "bls.b64", to_b64(bls_sk.as_ref()))?;
+        export(&self.path, "secret", "bls.hex", hex::encode(bls_sk))?;
+        export(&self.path, "public", "bls.b64", to_b64(bls_pk.as_ref()))?;
+        export(&self.path, "public", "bls.hex", hex::encode(bls_pk))?;
 
         export(&self.path, "secret", "b64", to_b64(sk.as_ref()))?;
         export(&self.path, "secret", "hex", hex::encode(sk))?;

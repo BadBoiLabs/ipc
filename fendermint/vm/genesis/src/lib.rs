@@ -12,10 +12,10 @@ use fendermint_actor_eam::PermissionModeParams;
 use fvm_shared::version::NetworkVersion;
 use fvm_shared::{address::Address, econ::TokenAmount};
 
+use bls_signatures::Serialize as _;
 use fendermint_crypto::{normalize_public_key, PublicKey};
 use fendermint_vm_core::Timestamp;
 use fendermint_vm_encoding::IsHumanReadable;
-
 #[cfg(feature = "arb")]
 mod arb;
 
@@ -40,7 +40,9 @@ pub struct Genesis {
     /// Validators in genesis are given with their FIL collateral to maintain the
     /// highest possible fidelity when we are deriving a genesis file in IPC,
     /// where the parent subnet tracks collateral.
-    pub validators: Vec<Validator<Collateral>>,
+    /// That Vec<u8> is the validators BLS public key.
+    pub validators: Vec<(Validator<Collateral>, Vec<u8>)>,
+
     pub accounts: Vec<Actor>,
     /// The custom eam permission mode that controls who can deploy contracts
     pub eam_permission_mode: PermissionMode,

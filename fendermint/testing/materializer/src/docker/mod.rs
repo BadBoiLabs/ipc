@@ -3,6 +3,7 @@
 
 use anyhow::{anyhow, bail, Context};
 use async_trait::async_trait;
+use bls_signatures::Serialize as _;
 use bollard::{
     container::{ListContainersOptions, RemoveContainerOptions},
     network::ListNetworksOptions,
@@ -672,9 +673,14 @@ impl Materializer<DockerMaterials> for DockerMaterializer {
                 power_scale: 3,
                 validators: validators
                     .into_iter()
-                    .map(|(v, c)| Validator {
-                        public_key: ValidatorKey(*v.public_key()),
-                        power: c,
+                    .map(|(v, c)| {
+                        (
+                            Validator {
+                                public_key: ValidatorKey(*v.public_key()),
+                                power: c,
+                            },
+                            v.bls_public_key.as_bytes(),
+                        )
                     })
                     .collect(),
                 accounts: balances

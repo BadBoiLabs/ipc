@@ -4,6 +4,7 @@ use crate::{
     ipc, Account, Actor, ActorMeta, Collateral, Genesis, Multisig, PermissionMode, Power,
     SignerAddr, Validator, ValidatorKey,
 };
+use bls_signatures::Serialize;
 use cid::multihash::MultihashDigest;
 use fendermint_crypto::SecretKey;
 use fendermint_testing::arb::{ArbSubnetID, ArbTokenAmount};
@@ -96,6 +97,14 @@ impl<P: Arbitrary> Arbitrary for Validator<P> {
     }
 }
 
+fn arbitrary_bls_pub_key(g: &mut Gen) -> Vec<u8> {
+    let seed: [u8; 32] = std::array::from_fn(|_| u8::arbitrary(g));
+    let mut rng = StdRng::from_seed(seed);
+    bls_signatures::PrivateKey::generate(&mut rng)
+        .public_key()
+        .as_bytes()
+}
+
 impl Arbitrary for Genesis {
     fn arbitrary(g: &mut Gen) -> Self {
         let nv = usize::arbitrary(g) % 10 + 1;
@@ -106,7 +115,9 @@ impl Arbitrary for Genesis {
             network_version: NetworkVersion::new(*g.choose(&[21]).unwrap()),
             base_fee: ArbTokenAmount::arbitrary(g).0,
             power_scale: *g.choose(&[-1, 0, 3]).unwrap(),
-            validators: (0..nv).map(|_| Arbitrary::arbitrary(g)).collect(),
+            validators: (0..nv)
+                .map(|_| (Arbitrary::arbitrary(g), arbitrary_bls_pub_key(g)))
+                .collect(),
             accounts: (0..na).map(|_| Arbitrary::arbitrary(g)).collect(),
             eam_permission_mode: PermissionMode::Unrestricted,
             ipc: if bool::arbitrary(g) {
