@@ -54,6 +54,7 @@ use serde::{Deserialize, Serialize};
 use tendermint::abci::request::CheckTxKind;
 use tendermint::abci::{request, response};
 use tracing::instrument;
+
 #[derive(Serialize)]
 #[repr(u8)]
 pub enum AppStoreKey {
@@ -490,6 +491,7 @@ where
             tags.push(TagKind::BlockHeight(fvm_tags_height));
             tags
         });
+
         tracing::trace!("Tags to sign: {:?}", tags);
 
         let signatures = self

@@ -237,6 +237,17 @@ script = """
 cargo run -- --secret-key test-data/keys/volvo.sk deploy-demo-contract  
 """
 
+
+### Follow logs
+[tasks.follow_logs]
+command = "docker"
+args = ["logs", "-f", "${CONTAINER_NAME}"]
+env = { "CONTAINER_NAME" = "${FM_CONTAINER_NAME}" }
+ignore_errors = true
+
+
+# ### node-1 tasks
+
 [tasks.node-1-setup]
 env_files = [{ path = "./scripts/node-1.env" }]
 extend = "node-setup"
@@ -248,6 +259,10 @@ extend = "node-teardown"
 [tasks.node-1-sync-test]
 env_files = [{ path = "./scripts/node-1.env" }]
 extend = "node-sync-test"
+
+[tasks.node-1-follow_logs]
+env_files = [{ path = "./scripts/node-1.env" }]
+extend = "follow_logs"
 
 # ### node-2 tasks
 
@@ -263,6 +278,10 @@ extend = "node-teardown"
 env_files = [{ path = "./scripts/node-2.env" }]
 extend = "node-sync-test"
 
+[tasks.node-2-follow_logs]
+env_files = [{ path = "./scripts/node-2.env" }]
+extend = "follow_logs"
+
 # ### node-3 tasks
 
 [tasks.node-3-setup]
@@ -276,3 +295,7 @@ extend = "node-teardown"
 [tasks.node-3-sync-test]
 env_files = [{ path = "./scripts/node-3.env" }]
 extend = "node-sync-test"
+
+[tasks.node-3-follow_logs]
+env_files = [{ path = "./scripts/node-3.env" }]
+extend = "follow_logs"

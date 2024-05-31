@@ -102,6 +102,7 @@ where
         DefaultKernel::link_syscalls(linker)
     }
 }
+const LOG_TARGET: &str = "delorean::fvm";
 
 impl<C> DebugOps for LoggingKernel<C>
 where
@@ -110,13 +111,13 @@ where
     fn log(&self, msg: String) {
         let (level, actor_name, actor_id, message) = parse_log(&msg).unwrap();
         if level == "INFO" {
-            tracing::info!("Actor {}({}) - {}", actor_name, actor_id, message);
+            tracing::info!(target: LOG_TARGET, "Actor {}({}) - {}", actor_name, actor_id, message);
         } else if level == "DEBUG" {
-            tracing::debug!("Actor {}({}) - {}", actor_name, actor_id, message);
+            tracing::debug!(target: LOG_TARGET,"Actor {}({}) - {}", actor_name, actor_id, message);
         } else if level == "WARN" {
-            tracing::warn!("Actor {}({}) - {}", actor_name, actor_id, message);
+            tracing::warn!(target: LOG_TARGET,"Actor {}({}) - {}", actor_name, actor_id, message);
         } else if level == "ERROR" {
-            tracing::error!("Actor {}({}) - {}", actor_name, actor_id, message);
+            tracing::error!(target: LOG_TARGET,"Actor {}({}) - {}", actor_name, actor_id, message);
         }
     }
 
