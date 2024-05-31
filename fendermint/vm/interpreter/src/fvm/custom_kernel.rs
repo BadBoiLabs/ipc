@@ -118,6 +118,10 @@ where
             tracing::warn!(target: LOG_TARGET,"Actor {}({}) - {}", actor_name, actor_id, message);
         } else if level == "ERROR" {
             tracing::error!(target: LOG_TARGET,"Actor {}({}) - {}", actor_name, actor_id, message);
+        } else if level == "TRACE" {
+            tracing::trace!(target: LOG_TARGET,"Actor {}({}) - {}", actor_name, actor_id, message);
+        } else {
+            tracing::info!(target: LOG_TARGET,"Actor {}({}) - {}", actor_name, actor_id, message);
         }
     }
 
