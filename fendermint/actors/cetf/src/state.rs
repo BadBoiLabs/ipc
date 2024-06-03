@@ -142,7 +142,7 @@ impl State {
         let mut digest = [0u8; 32];
         hash_into(SupportedHashes::Sha2_256, &pre, &mut digest);
         self.add_signed_and_hashed_tag(rt, digest.into(), signature)?;
-        log::info!(
+        log::debug!(
             "Added Signed BlockHeight into map at reported height {}. FVM epoch: {}.",
             height,
             rt.curr_epoch(),
